@@ -183,15 +183,17 @@
                     </div>
                 </div>
 
+                <!-- STRUCTURE FIX: Using DIV instead of FORM to prevent auto-submission -->
                 <div class="lg:col-span-2 glass-card p-10 rounded-[2.5rem] relative overflow-hidden">
                     <h3 class="text-2xl font-bold mb-8 text-white tracking-tight">Access Guide</h3>
-                    <form id="optin-form" class="space-y-5">
-                        <input type="text" id="opt-name" placeholder="Full Name" required class="input-field w-full p-4 rounded-xl text-sm">
-                        <input type="email" id="opt-email" placeholder="Email Address" required class="input-field w-full p-4 rounded-xl text-sm">
-                        <button type="submit" id="optin-btn" class="btn-primary w-full font-bold py-5 rounded-2xl text-[11px] uppercase tracking-[0.3em] mt-2 flex justify-center items-center gap-2">
+                    <div class="space-y-5">
+                        <input type="text" id="opt-name" placeholder="Full Name" class="input-field w-full p-4 rounded-xl text-sm">
+                        <input type="email" id="opt-email" placeholder="Email Address" class="input-field w-full p-4 rounded-xl text-sm">
+                        <!-- TYPE FIX: button instead of submit to bypass browser logic -->
+                        <button type="button" id="optin-trigger" onclick="window.handleOptIn()" class="btn-primary w-full font-bold py-5 rounded-2xl text-[11px] uppercase tracking-[0.3em] mt-2 flex justify-center items-center gap-2">
                             <span>Get Free Access</span>
                         </button>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -251,35 +253,35 @@
                 </div>
 
                 <div class="glass-card p-8 md:p-12 rounded-[2.5rem]">
-                    <form id="coaching-form" class="space-y-10">
+                    <div class="space-y-10">
                         <div class="grid md:grid-cols-2 gap-8">
                             <div class="space-y-3">
                                 <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Applicant Name</label>
-                                <input type="text" id="app-name" required class="input-field w-full p-4 rounded-xl text-sm">
+                                <input type="text" id="app-name" class="input-field w-full p-4 rounded-xl text-sm">
                             </div>
                             <div class="space-y-3">
                                 <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Phone Number</label>
-                                <input type="tel" id="app-phone" placeholder="+1 (555) 000-0000" required class="input-field w-full p-4 rounded-xl text-sm">
+                                <input type="tel" id="app-phone" placeholder="+1 (555) 000-0000" class="input-field w-full p-4 rounded-xl text-sm">
                             </div>
                         </div>
                         <div class="grid md:grid-cols-2 gap-8">
                             <div class="space-y-3">
                                 <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Focus Area</label>
-                                <input type="text" id="app-focus" placeholder="Face / Body / Posture" required class="input-field w-full p-4 rounded-xl text-sm">
+                                <input type="text" id="app-focus" placeholder="Face / Body / Posture" class="input-field w-full p-4 rounded-xl text-sm">
                             </div>
                             <div class="space-y-3">
                                 <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Daily Discipline (1-10)</label>
-                                <input type="number" id="app-discipline" min="1" max="10" required class="input-field w-full p-4 rounded-xl text-sm">
+                                <input type="number" id="app-discipline" min="1" max="10" class="input-field w-full p-4 rounded-xl text-sm">
                             </div>
                         </div>
                         <div class="space-y-3">
                             <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">What is your "Why"?</label>
-                            <textarea id="app-why" rows="3" required class="input-field w-full p-4 rounded-xl text-sm"></textarea>
+                            <textarea id="app-why" rows="3" class="input-field w-full p-4 rounded-xl text-sm"></textarea>
                         </div>
-                        <button type="submit" id="coaching-btn" class="btn-primary w-full font-bold py-6 rounded-2xl text-[11px] uppercase tracking-[0.3em] flex justify-center items-center gap-2">
+                        <button type="button" onclick="window.handleCoachingSubmit()" id="coaching-btn" class="btn-primary w-full font-bold py-6 rounded-2xl text-[11px] uppercase tracking-[0.3em] flex justify-center items-center gap-2">
                             <span>Submit Application</span>
                         </button>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -326,7 +328,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // APP CONFIG
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'aesthetic-architecture-official-v4';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'aesthetic-architecture-v-final-fix';
         const firebaseConfig = JSON.parse(__firebase_config);
 
         const app = initializeApp(firebaseConfig);
@@ -335,32 +337,99 @@
 
         let currentUser = null;
         let unsubscribeLeads = null;
-        let isAuthReady = false;
 
-        const collectionPath = 'leads_final_directory';
+        const collectionPath = 'leads_directory';
         const getLeadsRef = () => collection(db, 'artifacts', appId, 'public', 'data', collectionPath);
 
         // NAVIGATION (Global)
         window.navigateTo = (pageId) => {
+            // Hard Lock Navigation State
+            sessionStorage.setItem('active_route', pageId);
+
             const pages = document.querySelectorAll('[id^="page-"]');
             pages.forEach(p => p.classList.add('hidden'));
             
             const target = document.getElementById(pageId);
             if(target) {
                 target.classList.remove('hidden');
-                // Auto-init listener if entering admin page
-                if (pageId === 'page-admin') {
-                    initLeadsListener();
-                }
+                if (pageId === 'page-admin') initLeadsListener();
             }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo({ top: 0, behavior: 'instant' });
         };
 
+        // Recovery on refresh
+        window.addEventListener('DOMContentLoaded', () => {
+            const lastPage = sessionStorage.getItem('active_route');
+            if (lastPage && lastPage !== 'page-optin') {
+                window.navigateTo(lastPage);
+            }
+        });
+
+        // FORM HANDLERS (Hard-Coded JavaScript Buttons)
+        window.handleOptIn = async () => {
+            const nameInput = document.getElementById('opt-name');
+            const emailInput = document.getElementById('opt-email');
+
+            // Basic Validation
+            if (!nameInput.value || !emailInput.value) {
+                nameInput.classList.add('border-red-500/50');
+                emailInput.classList.add('border-red-500/50');
+                setTimeout(() => {
+                    nameInput.classList.remove('border-red-500/50');
+                    emailInput.classList.remove('border-red-500/50');
+                }, 1000);
+                return;
+            }
+
+            // 1. FORCED NAVIGATION (No waiting)
+            window.navigateTo('page-delivery');
+
+            // 2. BACKGROUND DATA SAVE
+            if (currentUser) {
+                try {
+                    await addDoc(getLeadsRef(), {
+                        type: 'Opt-In',
+                        name: nameInput.value,
+                        email: emailInput.value,
+                        timestamp: new Date().toISOString()
+                    });
+                } catch (e) { console.log('Background save throttled'); }
+            }
+        };
+
+        window.handleCoachingSubmit = async () => {
+            const name = document.getElementById('app-name').value;
+            const phone = document.getElementById('app-phone').value;
+            const btn = document.getElementById('coaching-btn');
+            
+            if (!name || !phone) return;
+
+            btn.innerHTML = '<div class="loader"></div>';
+
+            const payload = {
+                type: 'Coaching',
+                name: name,
+                phone: phone,
+                focus: document.getElementById('app-focus').value,
+                discipline: document.getElementById('app-discipline').value,
+                why: document.getElementById('app-why').value,
+                timestamp: new Date().toISOString()
+            };
+
+            // Navigate immediately to prevent hangs
+            window.navigateTo('page-thankyou');
+
+            if (currentUser) {
+                try {
+                    await addDoc(getLeadsRef(), payload);
+                } catch (e) { console.log('Submission save failed'); }
+            }
+        };
+
+        // ADMIN LOGIC
         window.promptAdminAccess = () => {
             document.getElementById('password-modal').classList.remove('hidden');
-            const passInput = document.getElementById('admin-pass');
-            passInput.value = '';
-            passInput.focus();
+            document.getElementById('admin-pass').focus();
         };
 
         window.verifyAdminAccess = () => {
@@ -369,9 +438,7 @@
                 document.getElementById('password-modal').classList.add('hidden');
                 window.navigateTo('page-admin');
             } else {
-                const input = document.getElementById('admin-pass');
-                input.classList.add('border-red-500');
-                setTimeout(() => input.classList.remove('border-red-500'), 800);
+                document.getElementById('admin-pass').classList.add('border-red-500');
             }
         };
 
@@ -379,7 +446,7 @@
             document.getElementById('pdf-preview').classList.toggle('hidden');
         };
 
-        // AUTH
+        // AUTH INIT
         const initAuth = async () => {
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -387,82 +454,18 @@
                 } else {
                     await signInAnonymously(auth);
                 }
-            } catch (err) {
-                console.error("Auth init error:", err);
-            }
+            } catch (err) {}
         };
 
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
-            if (user) {
-                isAuthReady = true;
-                if (!document.getElementById('page-admin').classList.contains('hidden')) {
-                    initLeadsListener();
-                }
+            if (user && !document.getElementById('page-admin').classList.contains('hidden')) {
+                initLeadsListener();
             }
         });
 
         initAuth();
 
-        // SUBMISSION HANDLERS
-        document.addEventListener('DOMContentLoaded', () => {
-            const optinForm = document.getElementById('optin-form');
-            if (optinForm) {
-                optinForm.addEventListener('submit', async (e) => {
-                    e.preventDefault(); // CRITICAL: Stop the page refresh immediately
-                    
-                    // Proceed immediately to page-delivery for better UX
-                    window.navigateTo('page-delivery');
-
-                    if (!isAuthReady || !currentUser) return;
-
-                    const payload = {
-                        type: 'Opt-In',
-                        name: document.getElementById('opt-name').value,
-                        email: document.getElementById('opt-email').value,
-                        timestamp: new Date().toISOString()
-                    };
-
-                    try {
-                        await addDoc(getLeadsRef(), payload);
-                    } catch (err) {
-                        console.error("Background save failed:", err);
-                    }
-                });
-            }
-
-            const coachingForm = document.getElementById('coaching-form');
-            if (coachingForm) {
-                coachingForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    
-                    const btn = document.getElementById('coaching-btn');
-                    btn.innerHTML = '<div class="loader"></div>';
-                    
-                    const payload = {
-                        type: 'Coaching',
-                        name: document.getElementById('app-name').value,
-                        phone: document.getElementById('app-phone').value,
-                        focus: document.getElementById('app-focus').value,
-                        discipline: document.getElementById('app-discipline').value,
-                        why: document.getElementById('app-why').value,
-                        timestamp: new Date().toISOString()
-                    };
-
-                    try {
-                        await addDoc(getLeadsRef(), payload);
-                        window.navigateTo('page-thankyou');
-                    } catch (err) {
-                        console.error("Save failed:", err);
-                        window.navigateTo('page-thankyou');
-                    } finally {
-                        btn.innerHTML = '<span>Submit Application</span>';
-                    }
-                });
-            }
-        });
-
-        // DIRECTORY SYNC
         function initLeadsListener() {
             if (unsubscribeLeads) unsubscribeLeads();
             if (!currentUser) return;
@@ -472,7 +475,6 @@
 
             unsubscribeLeads = onSnapshot(getLeadsRef(), (snap) => {
                 container.innerHTML = '';
-                
                 if (snap.empty) {
                     container.innerHTML = '<p class="text-gray-500 text-center py-12">No lead records found.</p>';
                     return;
@@ -490,46 +492,34 @@
                     if(lead.type === 'Coaching') {
                         detailsHTML = `
                             <div class="grid grid-cols-2 gap-4 mt-2 pt-4 border-t border-white/5">
-                                <div>
-                                    <p class="text-[8px] text-gray-500 uppercase font-bold tracking-widest">Focus Area</p>
-                                    <p class="text-white text-xs">${lead.focus || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <p class="text-[8px] text-gray-500 uppercase font-bold tracking-widest">Discipline</p>
-                                    <p class="text-yellow-500 text-xs font-bold">${lead.discipline || '0'}/10</p>
-                                </div>
-                                <div class="col-span-2">
-                                    <p class="text-[8px] text-gray-500 uppercase font-bold tracking-widest">"Why"</p>
-                                    <p class="text-gray-300 text-xs italic leading-relaxed">"${lead.why || 'No response.'}"</p>
-                                </div>
+                                <div><p class="text-[8px] text-gray-500 uppercase font-bold tracking-widest">Focus</p><p class="text-white text-xs">${lead.focus || 'N/A'}</p></div>
+                                <div><p class="text-[8px] text-gray-500 uppercase font-bold tracking-widest">Discipline</p><p class="text-yellow-500 text-xs font-bold">${lead.discipline || '0'}/10</p></div>
                             </div>
                         `;
                     }
 
                     el.innerHTML = `
                         <div class="flex justify-between items-start">
-                            <div class="space-y-1">
+                            <div>
                                 <p class="text-[9px] text-yellow-500 font-bold uppercase tracking-widest">${lead.type}</p>
                                 <p class="text-white font-bold text-lg">${lead.name || 'Anonymous'}</p>
-                                <p class="text-gray-400 text-xs font-mono tracking-tight">${lead.email || lead.phone || 'No Contact'}</p>
+                                <p class="text-gray-400 text-xs font-mono">${lead.email || lead.phone || 'No Contact'}</p>
                             </div>
-                            <button onclick="window.deleteLead('${lead.id}')" class="text-[9px] text-red-500/50 hover:text-red-500 uppercase font-black px-3 py-2 border border-red-500/20 rounded-lg transition-colors">Delete</button>
+                            <button onclick="window.deleteLead('${lead.id}')" class="text-[9px] text-red-500/50 hover:text-red-500 uppercase font-black px-3 py-2 border border-red-500/20 rounded-lg">Delete</button>
                         </div>
                         ${detailsHTML}
                         <div class="text-[8px] text-gray-600 text-right mt-1 uppercase tracking-widest">${new Date(lead.timestamp).toLocaleString()}</div>
                     `;
                     container.appendChild(el);
                 });
-            }, (err) => {
-                container.innerHTML = `<p class="text-red-500 text-center py-12 text-[10px] uppercase tracking-widest">Connection Error.</p>`;
+            }, () => {
+                container.innerHTML = `<p class="text-red-500 text-center py-12">Connection failed.</p>`;
             });
         }
 
         window.deleteLead = async (id) => {
             if (!currentUser) return;
-            try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionPath, id));
-            } catch(e) { console.error(e); }
+            try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionPath, id)); } catch(e) {}
         };
     </script>
 </body>
