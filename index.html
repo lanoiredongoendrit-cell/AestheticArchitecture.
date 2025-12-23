@@ -185,7 +185,7 @@
 
                 <div class="lg:col-span-2 glass-card p-10 rounded-[2.5rem] relative overflow-hidden">
                     <h3 class="text-2xl font-bold mb-8 text-white tracking-tight">Access Guide</h3>
-                    <form id="optin-form" onsubmit="window.handleOptIn(event)" class="space-y-5">
+                    <form id="optin-form" class="space-y-5">
                         <input type="text" id="opt-name" placeholder="Full Name" required class="input-field w-full p-4 rounded-xl text-sm">
                         <input type="email" id="opt-email" placeholder="Email Address" required class="input-field w-full p-4 rounded-xl text-sm">
                         <button type="submit" id="optin-btn" class="btn-primary w-full font-bold py-5 rounded-2xl text-[11px] uppercase tracking-[0.3em] mt-2 flex justify-center items-center gap-2">
@@ -251,7 +251,7 @@
                 </div>
 
                 <div class="glass-card p-8 md:p-12 rounded-[2.5rem]">
-                    <form id="coaching-form" onsubmit="window.handleCoachingSubmit(event)" class="space-y-10">
+                    <form id="coaching-form" class="space-y-10">
                         <div class="grid md:grid-cols-2 gap-8">
                             <div class="space-y-3">
                                 <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Applicant Name</label>
@@ -396,7 +396,6 @@
             currentUser = user;
             if (user) {
                 isAuthReady = true;
-                // If user is already looking at admin page, start listener
                 if (!document.getElementById('page-admin').classList.contains('hidden')) {
                     initLeadsListener();
                 }
@@ -405,61 +404,63 @@
 
         initAuth();
 
-        // SUBMISSION
-        window.handleOptIn = async (e) => {
-            e.preventDefault();
-            if (!isAuthReady || !currentUser) return;
+        // SUBMISSION HANDLERS
+        document.addEventListener('DOMContentLoaded', () => {
+            const optinForm = document.getElementById('optin-form');
+            if (optinForm) {
+                optinForm.addEventListener('submit', async (e) => {
+                    e.preventDefault(); // CRITICAL: Stop the page refresh immediately
+                    
+                    // Proceed immediately to page-delivery for better UX
+                    window.navigateTo('page-delivery');
 
-            const btn = document.getElementById('optin-btn');
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<div class="loader"></div>';
+                    if (!isAuthReady || !currentUser) return;
 
-            const payload = {
-                type: 'Opt-In',
-                name: document.getElementById('opt-name').value,
-                email: document.getElementById('opt-email').value,
-                timestamp: new Date().toISOString()
-            };
+                    const payload = {
+                        type: 'Opt-In',
+                        name: document.getElementById('opt-name').value,
+                        email: document.getElementById('opt-email').value,
+                        timestamp: new Date().toISOString()
+                    };
 
-            try {
-                await addDoc(getLeadsRef(), payload);
-                window.navigateTo('page-delivery');
-            } catch (err) {
-                console.error("Save failed:", err);
-                window.navigateTo('page-delivery');
-            } finally {
-                btn.innerHTML = originalHTML;
+                    try {
+                        await addDoc(getLeadsRef(), payload);
+                    } catch (err) {
+                        console.error("Background save failed:", err);
+                    }
+                });
             }
-        };
 
-        window.handleCoachingSubmit = async (e) => {
-            e.preventDefault();
-            if (!isAuthReady || !currentUser) return;
+            const coachingForm = document.getElementById('coaching-form');
+            if (coachingForm) {
+                coachingForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const btn = document.getElementById('coaching-btn');
+                    btn.innerHTML = '<div class="loader"></div>';
+                    
+                    const payload = {
+                        type: 'Coaching',
+                        name: document.getElementById('app-name').value,
+                        phone: document.getElementById('app-phone').value,
+                        focus: document.getElementById('app-focus').value,
+                        discipline: document.getElementById('app-discipline').value,
+                        why: document.getElementById('app-why').value,
+                        timestamp: new Date().toISOString()
+                    };
 
-            const btn = document.getElementById('coaching-btn');
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<div class="loader"></div>';
-            
-            const payload = {
-                type: 'Coaching',
-                name: document.getElementById('app-name').value,
-                phone: document.getElementById('app-phone').value,
-                focus: document.getElementById('app-focus').value,
-                discipline: document.getElementById('app-discipline').value,
-                why: document.getElementById('app-why').value,
-                timestamp: new Date().toISOString()
-            };
-
-            try {
-                await addDoc(getLeadsRef(), payload);
-                window.navigateTo('page-thankyou');
-            } catch (err) {
-                console.error("Save failed:", err);
-                window.navigateTo('page-thankyou');
-            } finally {
-                btn.innerHTML = originalHTML;
+                    try {
+                        await addDoc(getLeadsRef(), payload);
+                        window.navigateTo('page-thankyou');
+                    } catch (err) {
+                        console.error("Save failed:", err);
+                        window.navigateTo('page-thankyou');
+                    } finally {
+                        btn.innerHTML = '<span>Submit Application</span>';
+                    }
+                });
             }
-        };
+        });
 
         // DIRECTORY SYNC
         function initLeadsListener() {
@@ -479,15 +480,12 @@
 
                 const leads = [];
                 snap.forEach(d => leads.push({ id: d.id, ...d.data() }));
-                
-                // Newest first
                 leads.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
                 leads.forEach(lead => {
                     const el = document.createElement('div');
                     el.className = 'glass-card p-6 rounded-2xl flex flex-col gap-4 border-white/5';
                     
-                    // Specific details view
                     let detailsHTML = '';
                     if(lead.type === 'Coaching') {
                         detailsHTML = `
@@ -502,7 +500,7 @@
                                 </div>
                                 <div class="col-span-2">
                                     <p class="text-[8px] text-gray-500 uppercase font-bold tracking-widest">"Why"</p>
-                                    <p class="text-gray-300 text-xs italic leading-relaxed">"${lead.why || 'No response provided.'}"</p>
+                                    <p class="text-gray-300 text-xs italic leading-relaxed">"${lead.why || 'No response.'}"</p>
                                 </div>
                             </div>
                         `;
@@ -518,12 +516,12 @@
                             <button onclick="window.deleteLead('${lead.id}')" class="text-[9px] text-red-500/50 hover:text-red-500 uppercase font-black px-3 py-2 border border-red-500/20 rounded-lg transition-colors">Delete</button>
                         </div>
                         ${detailsHTML}
-                        <div class="text-[8px] text-gray-600 text-right mt-1 uppercase tracking-widest">Received: ${new Date(lead.timestamp).toLocaleString()}</div>
+                        <div class="text-[8px] text-gray-600 text-right mt-1 uppercase tracking-widest">${new Date(lead.timestamp).toLocaleString()}</div>
                     `;
                     container.appendChild(el);
                 });
             }, (err) => {
-                container.innerHTML = `<p class="text-red-500 text-center py-12 text-[10px] uppercase tracking-widest">Permission Denied. Authentication Required.</p>`;
+                container.innerHTML = `<p class="text-red-500 text-center py-12 text-[10px] uppercase tracking-widest">Connection Error.</p>`;
             });
         }
 
